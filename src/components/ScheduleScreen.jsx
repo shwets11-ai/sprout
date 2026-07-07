@@ -3,14 +3,14 @@ import { getActivitiesByDate, getTodayStr } from '../db/database';
 import { analyzePatterns } from '../utils/analyzePatterns';
 import { getRecentActivities } from '../db/database';
 
-export default function ScheduleScreen({ onBack }) {
+export default function ScheduleScreen({ onBack, toddlerId }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
 
   const generateSchedule = async () => {
     setLoading(true);
-    const activities = await getRecentActivities(7);
+    const activities = await getRecentActivities(7, toddlerId);
     const patterns = analyzePatterns(activities);
     setInsights(patterns);
     setGenerated(true);

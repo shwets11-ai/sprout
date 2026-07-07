@@ -7,7 +7,7 @@ const activityTypes = [
   'Sensory Play', 'Pretend Play',
 ];
 
-export default function LearningForm({ onSaved }) {
+export default function LearningForm({ onSaved, toddlerId }) {
   const [time, setTime] = useState(() => {
     const n = new Date();
     return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
@@ -22,7 +22,7 @@ export default function LearningForm({ onSaved }) {
     e.preventDefault();
     if (!time || !activityType) return;
     setSaving(true);
-    await addActivity('learning', {
+    await addActivity('learning', { toddlerId, 
       date: getTodayStr(),
       time,
       activityType,

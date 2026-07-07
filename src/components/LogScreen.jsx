@@ -11,7 +11,7 @@ const tabs = [
   { id: 'play', label: 'Play', color: 'border-green-500', textColor: 'text-green-600' },
 ];
 
-export default function LogScreen({ initialCategory, onBack, onSaved }) {
+export default function LogScreen({ initialCategory, onBack, onSaved, toddlerId }) {
   const [activeTab, setActiveTab] = useState(initialCategory || 'meals');
 
   const handleSaved = () => {
@@ -48,10 +48,10 @@ export default function LogScreen({ initialCategory, onBack, onSaved }) {
       </div>
 
       <div className="card">
-        {activeTab === 'meals' && <MealForm onSaved={handleSaved} />}
-        {activeTab === 'learning' && <LearningForm onSaved={handleSaved} />}
-        {activeTab === 'sleep' && <SleepForm onSaved={handleSaved} />}
-        {activeTab === 'play' && <PlayForm onSaved={handleSaved} />}
+        {activeTab === 'meals' && <MealForm onSaved={handleSaved} toddlerId={toddlerId} />}
+        {activeTab === 'learning' && <LearningForm onSaved={handleSaved} toddlerId={toddlerId} />}
+        {activeTab === 'sleep' && <SleepForm onSaved={handleSaved} toddlerId={toddlerId} />}
+        {activeTab === 'play' && <PlayForm onSaved={handleSaved} toddlerId={toddlerId} />}
       </div>
     </div>
   );

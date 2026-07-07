@@ -18,7 +18,7 @@ function getTimeGroup(time) {
   return '🌙 Evening';
 }
 
-export default function DashboardScreen({ onLog }) {
+export default function DashboardScreen({ onLog, toddlerId, toddlerName }) {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +31,7 @@ export default function DashboardScreen({ onLog }) {
 
   const loadActivities = useCallback(async () => {
     setLoading(true);
-    const data = await getActivitiesByDate(today);
+    const data = await getActivitiesByDate(today, toddlerId);
     setActivities(data);
     setLoading(false);
   }, [today]);
@@ -56,7 +56,7 @@ export default function DashboardScreen({ onLog }) {
       <div className="mb-2">
         <h1 className="text-xl font-bold text-gray-800">Today's Timeline</h1>
         <p className="text-sm text-gray-400 mt-0.5">{todayFormatted}</p>
-        <p className="text-sm text-gray-500 mt-1 font-medium">How's your little sprout today? 🌱</p>
+        <p className="text-sm text-gray-500 mt-1 font-medium">{toddlerName ? `How's ${toddlerName} today? 🌱` : "How's your little sprout today? 🌱"}</p>
       </div>
 
       {/* Quick-add buttons */}

@@ -13,7 +13,7 @@ const mealPresets = [
   { label: 'Snack', time: '15:00' },
 ];
 
-export default function MealForm({ onSaved }) {
+export default function MealForm({ onSaved, toddlerId }) {
   const [time, setTime] = useState('');
   const [foodItems, setFoodItems] = useState([]);
   const [customFood, setCustomFood] = useState('');
@@ -40,7 +40,7 @@ export default function MealForm({ onSaved }) {
     e.preventDefault();
     if (!time || foodItems.length === 0) return;
     setSaving(true);
-    await addActivity('meals', {
+    await addActivity('meals', { toddlerId, 
       date: getTodayStr(),
       time,
       foodItems: foodItems.join(', '),

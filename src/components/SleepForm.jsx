@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { addActivity, getTodayStr } from '../db/database';
 
-export default function SleepForm({ onSaved }) {
+export default function SleepForm({ onSaved, toddlerId }) {
   const [type, setType] = useState('nap');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -26,7 +26,7 @@ export default function SleepForm({ onSaved }) {
     e.preventDefault();
     if (!startTime || !endTime) return;
     setSaving(true);
-    await addActivity('sleep', {
+    await addActivity('sleep', { toddlerId, 
       date: getTodayStr(),
       startTime,
       endTime,

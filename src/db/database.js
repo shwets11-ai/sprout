@@ -28,19 +28,199 @@ async function getUserId() {
   return user.id
 }
 
-// ─── CRUD helpers ─────────────────────────────────────────────
+// ─── Family Management ────────────────────────────────────────
+
+/**
+ * Create a new family and add current user as the first member.
+ * @param {string} name - family name
+ * @returns {Promise<Object>} the created family
+ */
+export async function createFamily(name) {
+  const userId = await getUserId()
+  const { data: family, error: famError } = await supabase
+    .from('families')
+    .insert({ name })
+    .select()
+    .single()
+  if (famError) throw famError
+
+  const { error: memError } = await supabase
+    .from('family_members')
+    .insert({ family_id: family.id, user_id: userId })
+  if (memError) throw memError
+
+  return family
+}
+
+/**
+ * Get all families the current user belongs to.
+ * @returns {Promise<Array>}
+ */
+export async function getMyFamilies() {
+  const userId = await getUserId()
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('family_id, families(*)')
+    .eq('user_id', userId)
+  if (error) throw error
+  return (data || []).map((row) => row.families)
+}
+
+/**
+ * Get all members of a family.
+ * @param {number} familyId
+ * @returns {Promise<Array>}
+ */
+export async function getFamilyMembers(familyId) {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('user_id, created_at, users:user_id(email)')
+    .eq('family_id', familyId)
+  if (error) throw error
+  return data || []
+}
+
+// ─── Toddler Management ───────────────────────────────────────
+
+/**
+ * Create a toddler in a family.
+ * @param {number} familyId
+ * @param {string} name
+ * @param {string} [birthDate] - YYYY-MM-DD
+ * @returns {Promise<Object>}
+ */
+export async function createToddler(familyId, name, birthDate) {
+  const { data, error } = await supabase
+    .from('toddlers')
+    .insert({ family_id: familyId, name, birth_date: birthDate || null })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Get all toddlers in a family.
+ * @param {number} familyId
+ * @returns {Promise<Array>}
+ */
+export async function getToddlers(familyId) {
+  const { data, error } = await supabase
+    .from('toddlers')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+/**
+ * Get all toddlers from all families the user belongs to.
+ * @returns {Promise<Array>}
+ */
+export async function getAllMyToddlers() {
+  const userId = await getUserId()
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('family_id, toddlers:family_id(*)')
+    .eq('user_id', userId)
+  if (error) throw error
+
+  const toddlers = []
+  const seen = new Set()
+  for (const row of data || []) {
+    for (const t of row.toddlers || []) {
+      if (!seen.has(t.id)) {
+        seen.add(t.id)
+        toddlers.push(t)
+      }
+    }
+  }
+  return toddlers
+}
+
+// ─── Invitation Management ────────────────────────────────────
+
+/**
+ * Invite someone to join a family.
+ * @param {number} familyId
+ * @param {string} email
+ * @returns {Promise<Object>}
+ */
+export async function inviteMember(familyId, email) {
+  const token = crypto.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36)
+  const { data, error } = await supabase
+    .from('invitations')
+    .insert({ family_id: familyId, email, token })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Accept an invitation and join the family.
+ * @param {string} token
+ * @returns {Promise<Object>}
+ */
+export async function acceptInvite(token) {
+  const userId = await getUserId()
+  // Get the invitation
+  const { data: invite, error: invError } = await supabase
+    .from('invitations')
+    .select('*')
+    .eq('token', token)
+    .is('accepted_at', null)
+    .single()
+  if (invError || !invite) throw new Error('Invalid or expired invitation')
+
+  // Add user to family
+  const { error: memError } = await supabase
+    .from('family_members')
+    .insert({ family_id: invite.family_id, user_id: userId })
+  if (memError) throw memError
+
+  // Mark invitation as accepted
+  const { error: updError } = await supabase
+    .from('invitations')
+    .update({ accepted_at: new Date().toISOString() })
+    .eq('id', invite.id)
+  if (updError) throw updError
+
+  return invite
+}
+
+/**
+ * Get pending invitations for a family.
+ * @param {number} familyId
+ * @returns {Promise<Array>}
+ */
+export async function getPendingInvitations(familyId) {
+  const { data, error } = await supabase
+    .from('invitations')
+    .select('*')
+    .eq('family_id', familyId)
+    .is('accepted_at', null)
+  if (error) throw error
+  return data || []
+}
+
+// ─── Activity CRUD (with optional toddlerId) ──────────────────
 
 /**
  * Add a new activity record.
  * @param {'meals'|'learning'|'sleep'|'play'} category
- * @param {Object} data - activity fields (date, time, etc.)
- * @returns {Promise<Object>} the inserted row
+ * @param {Object} data - activity fields
+ * @param {number} [toddlerId] - optional toddler id
+ * @returns {Promise<Object>}
  */
-export async function addActivity(category, data) {
+export async function addActivity(category, data, toddlerId) {
   const userId = await getUserId()
+  const payload = { user_id: userId, ...data }
+  if (toddlerId !== undefined) payload.toddler_id = toddlerId
   const { data: row, error } = await supabase
     .from(category)
-    .insert({ user_id: userId, ...data })
+    .insert(payload)
     .select()
     .single()
   if (error) throw error
@@ -64,20 +244,24 @@ export async function deleteActivity(category, id) {
 
 /**
  * Get all activities for a single date across all categories.
- * Returns a flat array sorted by time, each item with a `category` field.
  * @param {string} date - YYYY-MM-DD
+ * @param {number} [toddlerId] - optional filter by toddler
  * @returns {Promise<Array>}
  */
-export async function getActivitiesByDate(date) {
+export async function getActivitiesByDate(date, toddlerId) {
   const userId = await getUserId()
   const tables = ['meals', 'learning', 'sleep', 'play']
   const results = await Promise.all(
     tables.map(async (table) => {
-      const { data, error } = await supabase
+      let query = supabase
         .from(table)
         .select('*')
         .eq('user_id', userId)
         .eq('date', date)
+      if (toddlerId !== undefined) {
+        query = query.eq('toddler_id', toddlerId)
+      }
+      const { data, error } = await query
       if (error) throw error
       return (data || []).map((row) => ({ ...row, category: table === 'meals' ? 'meal' : table }))
     })
@@ -87,22 +271,27 @@ export async function getActivitiesByDate(date) {
 
 /**
  * Get all activities from the last N days.
- * @param {number} days - defaults to 7
+ * @param {number} [days=7]
+ * @param {number} [toddlerId] - optional filter by toddler
  * @returns {Promise<Array>}
  */
-export async function getRecentActivities(days = 7) {
+export async function getRecentActivities(days = 7, toddlerId) {
   const userId = await getUserId()
   const since = getDateNDaysAgo(days)
   const tables = ['meals', 'learning', 'sleep', 'play']
   const results = await Promise.all(
     tables.map(async (table) => {
-      const { data, error } = await supabase
+      let query = supabase
         .from(table)
         .select('*')
         .eq('user_id', userId)
         .gte('date', since)
         .lte('date', getTodayStr())
         .order('date', { ascending: true })
+      if (toddlerId !== undefined) {
+        query = query.eq('toddler_id', toddlerId)
+      }
+      const { data, error } = await query
       if (error) throw error
       return (data || []).map((row) => ({ ...row, category: table === 'meals' ? 'meal' : table }))
     })
@@ -117,12 +306,12 @@ export async function getRecentActivities(days = 7) {
 
 /**
  * Analyzes the last 7 days of data and returns structured insights.
+ * @param {number} [toddlerId] - optional filter by toddler
  * @returns {Promise<Object>}
  */
-export async function getScheduleInsights() {
-  const activities = await getRecentActivities(7)
+export async function getScheduleInsights(toddlerId) {
+  const activities = await getRecentActivities(7, toddlerId)
 
-  // Sleep analysis
   const sleepRecords = activities.filter((a) => a.category === 'sleep')
   let avgSleepDuration = 0
   if (sleepRecords.length > 0) {
@@ -140,7 +329,6 @@ export async function getScheduleInsights() {
     avgSleepDuration = Math.round(totalMinutes / sleepRecords.length)
   }
 
-  // Meal time analysis
   const mealRecords = activities.filter((a) => a.category === 'meal')
   const mealTimeCounts = {}
   mealRecords.forEach((m) => {
@@ -154,7 +342,6 @@ export async function getScheduleInsights() {
     .slice(0, 4)
     .map(([time]) => time)
 
-  // Learning analysis
   const learningRecords = activities.filter((a) => a.category === 'learning')
   const activityTypeCounts = {}
   learningRecords.forEach((l) => {
@@ -167,7 +354,6 @@ export async function getScheduleInsights() {
     .slice(0, 5)
     .map(([type]) => type)
 
-  // Play duration
   const playRecords = activities.filter((a) => a.category === 'play')
   let avgPlayDuration = 0
   if (playRecords.length > 0) {
@@ -176,7 +362,6 @@ export async function getScheduleInsights() {
     )
   }
 
-  // Nap time analysis
   const napRecords = sleepRecords.filter((s) => s.type === 'nap')
   const napTimeCounts = {}
   napRecords.forEach((n) => {

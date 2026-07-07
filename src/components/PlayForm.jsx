@@ -6,7 +6,7 @@ const activityTypes = [
   'Sensory Bin', 'Dress-up', 'Ball Games', 'Dance Party',
 ];
 
-export default function PlayForm({ onSaved }) {
+export default function PlayForm({ onSaved, toddlerId }) {
   const [time, setTime] = useState(() => {
     const n = new Date();
     return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
@@ -22,7 +22,7 @@ export default function PlayForm({ onSaved }) {
     e.preventDefault();
     if (!time || !activityType) return;
     setSaving(true);
-    await addActivity('play', {
+    await addActivity('play', { toddlerId, 
       date: getTodayStr(),
       time,
       activityType,
