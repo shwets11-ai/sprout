@@ -72,9 +72,10 @@ export async function getMyFamilies() {
  * @returns {Promise<Array>}
  */
 export async function getFamilyMembers(familyId) {
+  // Avoid joining to auth.users (very slow) — just return user_ids
   const { data, error } = await supabase
     .from('family_members')
-    .select('user_id, created_at, users:user_id(email)')
+    .select('user_id, created_at')
     .eq('family_id', familyId)
   if (error) throw error
   return data || []
@@ -120,23 +121,24 @@ export async function getToddlers(familyId) {
  */
 export async function getAllMyToddlers() {
   const userId = await getUserId()
-  const { data, error } = await supabase
+  // Step 1: get family IDs the user belongs to
+  const { data: memberships, error: memError } = await supabase
     .from('family_members')
-    .select('family_id, toddlers:family_id(*)')
+    .select('family_id')
     .eq('user_id', userId)
-  if (error) throw error
+  if (memError) throw memError
 
-  const toddlers = []
-  const seen = new Set()
-  for (const row of data || []) {
-    for (const t of row.toddlers || []) {
-      if (!seen.has(t.id)) {
-        seen.add(t.id)
-        toddlers.push(t)
-      }
-    }
-  }
-  return toddlers
+  const familyIds = (memberships || []).map((m) => m.family_id)
+  if (familyIds.length === 0) return []
+
+  // Step 2: get all toddlers in those families
+  const { data, error } = await supabase
+    .from('toddlers')
+    .select('*')
+    .in('family_id', familyIds)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data || []
 }
 
 // ─── Invitation Management ────────────────────────────────────
@@ -258,6 +260,8 @@ export async function getActivitiesByDate(date, toddlerId) {
         .select('*')
         .eq('user_id', userId)
         .eq('date', date)
+        .order('time', { ascending: true, nullsFirst: false })
+        .limit(30)
       if (toddlerId !== undefined) {
         query = query.eq('toddler_id', toddlerId)
       }
@@ -266,7 +270,7 @@ export async function getActivitiesByDate(date, toddlerId) {
       return (data || []).map((row) => ({ ...row, category: table === 'meals' ? 'meal' : table }))
     })
   )
-  return results.flat().sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+  return results.flat()
 }
 
 /**
@@ -288,6 +292,8 @@ export async function getRecentActivities(days = 7, toddlerId) {
         .gte('date', since)
         .lte('date', getTodayStr())
         .order('date', { ascending: true })
+        .order('time', { ascending: true })
+        .limit(50)
       if (toddlerId !== undefined) {
         query = query.eq('toddler_id', toddlerId)
       }

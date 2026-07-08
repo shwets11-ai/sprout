@@ -91,9 +91,9 @@ export default function FamilySettings({ onBack }) {
                   {members.map((m) => (
                     <div key={m.user_id} className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-sprout-green-100 flex items-center justify-center text-sprout-green-600 font-bold text-sm">
-                        {(m.users?.email?.[0] || '?').toUpperCase()}
+                        {m.user_id?.[0]?.toUpperCase() || '?'}
                       </div>
-                      <span className="text-sm text-gray-700">{m.users?.email || 'Unknown'}</span>
+                      <span className="text-sm text-gray-700 font-mono text-xs">{m.user_id?.slice(0, 8) || 'Unknown'}</span>
                     </div>
                   ))}
                 </div>
