@@ -39,8 +39,9 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+        env:
+          VITE_SUPABASE_URL: https://qkkqbtuenymkokidywrx.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFra3FidHVlbnlta29raWR5d3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MzU3MjUsImV4cCI6MjA5ODAxMTcyNX0.nuioSFjOu4IOQn0kYO_rOCmH2F5nQe_4dGbalcUM4t8
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
