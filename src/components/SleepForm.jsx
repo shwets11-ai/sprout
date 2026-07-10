@@ -26,13 +26,13 @@ export default function SleepForm({ onSaved, toddlerId }) {
     e.preventDefault();
     if (!startTime || !endTime) return;
     setSaving(true);
-    await addActivity('sleep', { toddlerId, 
+    await addActivity('sleep', {
       date: getTodayStr(),
       startTime,
       endTime,
       type,
       quality,
-    });
+    }, toddlerId);
     setStartTime('');
     setEndTime('');
     setQuality(0);

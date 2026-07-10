@@ -22,14 +22,14 @@ export default function PlayForm({ onSaved, toddlerId }) {
     e.preventDefault();
     if (!time || !activityType) return;
     setSaving(true);
-    await addActivity('play', { toddlerId, 
+    await addActivity('play', {
       date: getTodayStr(),
       time,
       activityType,
       duration,
       location,
       notes,
-    });
+    }, toddlerId);
     setActivityType('');
     setDuration(30);
     setNotes('');

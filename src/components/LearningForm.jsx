@@ -22,13 +22,13 @@ export default function LearningForm({ onSaved, toddlerId }) {
     e.preventDefault();
     if (!time || !activityType) return;
     setSaving(true);
-    await addActivity('learning', { toddlerId, 
+    await addActivity('learning', {
       date: getTodayStr(),
       time,
       activityType,
       duration,
       notes,
-    });
+    }, toddlerId);
     setActivityType('');
     setDuration(15);
     setNotes('');

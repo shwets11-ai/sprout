@@ -40,13 +40,13 @@ export default function MealForm({ onSaved, toddlerId }) {
     e.preventDefault();
     if (!time || foodItems.length === 0) return;
     setSaving(true);
-    await addActivity('meals', { toddlerId, 
+    await addActivity('meals', {
       date: getTodayStr(),
       time,
       foodItems: foodItems.join(', '),
       rating,
       notes,
-    });
+    }, toddlerId);
     setFoodItems([]);
     setCustomFood('');
     setRating(0);
